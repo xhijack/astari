@@ -30,4 +30,25 @@ def after_migrate():
         "reqd": 0
     })
 
+    create_custom_field("Appointment Type", {
+        "fieldname": "description",
+        "label": "Description",
+        "fieldtype": "Small Text",
+        "insert_after": "default_duration",  # sesuaikan jika perlu
+    })
+
+    create_custom_field("Appointment Type", {
+        "fieldname": "full_description",
+        "label": "Full Description",
+        "fieldtype": "Text Editor",
+        "insert_after": "description",  # sesuaikan jika perlu
+    })
+
+    create_custom_field("Appointment Type", {
+        "fieldname": "image",
+        "label": "Image",
+        "fieldtype": "Attach Image",
+        "insert_after": "full_description",  # sesuaikan jika perlu
+    })
+
 

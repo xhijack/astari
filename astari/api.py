@@ -1,4 +1,8 @@
+import datetime
+import calendar
 import frappe
+from frappe.utils import getdate
+
 
 @frappe.whitelist(allow_guest=True)
 def get_locations():
@@ -70,9 +74,10 @@ def get_services():
     """
     services = frappe.get_all(
         "Appointment Type",
-        fields=["name", "default_duration"]
+        fields=["name", "default_duration","description","full_description","image"]
     )
-    return services
+    frappe.response["data"] = services
+    frappe.response["http_status_code"] = 200
 
 @frappe.whitelist(allow_guest=True)
 def get_doctors():
@@ -89,15 +94,9 @@ def get_doctors():
             "full_description": d.get("full_description") or ""
         }
         respond.append(doctor)
-    return respond
+    frappe.response["data"] = respond
+    frappe.response["http_status_code"] = 200
 
-
-# astari/api.py
-
-import frappe
-from frappe.utils import getdate
-import datetime
-import calendar
 
 @frappe.whitelist(allow_guest=True)
 def get_schedules(doctor, month, location):
@@ -191,14 +190,9 @@ def get_schedules(doctor, month, location):
         result.append({"date": date_str, "status": status})
         cur_date = cur_date + datetime.timedelta(days=1)
 
-    return result
+    frappe.response["data"] = result
+    frappe.response["http_status_code"] = 200
 
-
-# astari/api.py
-
-import frappe
-from frappe.utils import getdate
-import datetime
 
 def parse_time_value(val):
     """
@@ -323,6 +317,6 @@ def get_schedule_detail(doctor, date, location):
             "status":     "available" if available else "not_available"
         })
 
-    return result
-
+    frappe.response["data"] = result
+    frappe.response["http_status_code"] = 200
 
