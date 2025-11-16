@@ -16,7 +16,8 @@ def get_locations():
     # Ambil semua Healthcare Service Unit (sesuaikan nama doctype kalau beda)
     units = frappe.get_all(
         "Healthcare Service Unit",
-        fields=["name", "healthcare_service_unit_name","attach_image"]
+        fields=["name", "healthcare_service_unit_name","attach_image"],
+        filters={"is_group": 0}  # hanya unit, bukan grup
     )
 
     result = []
