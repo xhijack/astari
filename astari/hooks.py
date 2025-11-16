@@ -83,7 +83,7 @@ app_license = "mit"
 # ------------
 
 # before_install = "astari.install.before_install"
-# after_install = "astari.install.after_install"
+after_migrate = "astari.migrations.after_migrate"
 
 # Uninstallation
 # ------------
