@@ -98,7 +98,6 @@ def get_doctors():
     frappe.response["data"] = respond
     frappe.response["http_status_code"] = 200
 
-
 @frappe.whitelist(allow_guest=True)
 def get_schedules(doctor, month, location):
     """
@@ -193,7 +192,6 @@ def get_schedules(doctor, month, location):
 
     frappe.response["data"] = result
     frappe.response["http_status_code"] = 200
-
 
 def parse_time_value(val):
     """
@@ -321,3 +319,93 @@ def get_schedule_detail(doctor, date, location):
     frappe.response["data"] = result
     frappe.response["http_status_code"] = 200
 
+@frappe.whitelist(allow_guest=True)
+def create_booking(location_id, service_id, doctor_id, booking_date, booking_time, full_name, mobile_phone, email=None):
+    """
+    Create a Patient Appointment booking.
+    Returns the name of the created appointment.
+    """
+    # validate inputs
+    service_unit_name = frappe.db.get_value("Healthcare Service Unit",
+                                            {"name": location_id}, "name")
+    if not service_unit_name:
+        frappe.throw(f"Cabang '{location_id}' tidak ditemukan")
+
+    practitioner_name = frappe.db.get_value("Healthcare Practitioner",
+                                            {"name": doctor_id}, "name")
+    if not practitioner_name:
+        frappe.throw(f"Dokter '{doctor_id}' tidak ditemukan")
+
+    appointment_type_name = frappe.db.get_value("Appointment Type",
+                                                {"name": service_id}, "name")
+    if not appointment_type_name:
+        frappe.throw(f"Layanan '{service_id}' tidak tersedia")
+
+    patient = frappe.db.get_value("Patient", {"mobile": normalize_phone(mobile_phone)}, "name")
+    if not patient:
+        # create new patient
+        patient_doc = frappe.get_doc({
+            "doctype": "Patient",
+            "first_name": full_name,
+            "mobile": normalize_phone(mobile_phone),
+            "email": email or "",
+            "sex": "Prefer not to say"
+        })
+        patient_doc.insert(ignore_permissions=True)
+        frappe.db.commit()
+        patient = patient_doc.name
+
+    # create appointment doc
+    appt_doc = frappe.get_doc({
+        "doctype": "Patient Appointment",
+        "service_unit": service_unit_name,
+        "practitioner": practitioner_name,
+        "appointment_type": appointment_type_name,
+        "appointment_date": booking_date,
+        "appointment_time": booking_time,
+        "patient_name": full_name,
+        "mobile": normalize_phone(mobile_phone),
+        "email": email or "",
+        "status": "Scheduled",
+        "patient": patient
+    })
+    appt_doc.insert(ignore_permissions=True)
+    frappe.db.commit()
+
+    return appt_doc.as_dict()
+
+import re
+
+def normalize_phone(phone: str) -> str:
+    """
+    Normalize phone number to +62 format.
+    
+    Rules:
+    - Remove all non-digit characters.
+    - If starts with "0", replace with "62".
+    - If starts with "62", keep as is.
+    - If starts with anything else, assume it's missing "62".
+    
+    Returns:
+    - Normalized phone number in format +62xxxxxxxx
+    """
+
+    # Keep digits only
+    digits = re.sub(r"\D", "", phone or "")
+
+    if not digits:
+        return ""
+
+    # Case: 0812345678 -> 62812345678
+    if digits.startswith("0"):
+        digits = "62" + digits[1:]
+
+    # Case: +62812345678 OR 62812345678 -> 62812345678
+    elif digits.startswith("62"):
+        pass  # already okay
+
+    # Case: 812345678 -> 62812345678
+    else:
+        digits = "62" + digits
+
+    return "+" + digits
