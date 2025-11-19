@@ -61,8 +61,8 @@ def get_locations():
             "photo": u.get("attach_image") or ""
         })
 
-    return result
-
+    frappe.response["data"] = result
+    frappe.response["http_status_code"] = 200
 
 @frappe.whitelist(allow_guest=True)
 def get_services():
@@ -77,7 +77,17 @@ def get_services():
         "Appointment Type",
         fields=["name", "default_duration","description","full_description","image"]
     )
-    frappe.response["data"] = services
+
+    result = []
+    for s in services:
+        result.append({
+            "id": s.get("name"),
+            "name": s.get("name"),
+            "description": s.get("full_description") or s.get("description") or "",
+            "image": s.get("image") or ""
+        })
+    
+    frappe.response["data"] = result
     frappe.response["http_status_code"] = 200
 
 @frappe.whitelist(allow_guest=True)
@@ -372,7 +382,9 @@ def create_booking(location_id, service_id, doctor_id, booking_date, booking_tim
     appt_doc.insert(ignore_permissions=True)
     frappe.db.commit()
 
-    return appt_doc.as_dict()
+    frappe.response["data"] = appt_doc.as_dict()
+    frappe.response["http_status_code"] = 200
+
 
 import re
 
@@ -409,3 +421,48 @@ def normalize_phone(phone: str) -> str:
         digits = "62" + digits
 
     return "+" + digits
+
+
+@frappe.whitelist(allow_guest=True)
+def login(username, password):
+    """
+    Simple login API.
+    Input:
+      - email
+      - password
+    Returns:
+      - user info dict on success
+      - error message on failure
+    """
+    email = frappe.form_dict.get("email")
+    password = frappe.form_dict.get("password")
+
+    if not email or not password:
+        frappe.response["http_status_code"] = 400
+        return {"error": "Email and password are required"}
+
+    try:
+        user = frappe.get_doc("User", email)
+        if not user.enabled:
+            frappe.response["http_status_code"] = 403
+            return {"error": "User is disabled"}
+
+        if not frappe.authenticate(email, password):
+            frappe.response["http_status_code"] = 401
+            return {"error": "Invalid credentials"}
+
+        # successful login
+        frappe.local.login_manager.user = email
+        frappe.local.login_manager.post_login()
+
+        user_info = {
+            "name": user.name,
+            "full_name": user.full_name,
+            "email": user.email,
+            "roles": user.get("roles")
+        }
+        return user_info
+
+    except frappe.DoesNotExistError:
+        frappe.response["http_status_code"] = 404
+        return {"error": "User not found"}
