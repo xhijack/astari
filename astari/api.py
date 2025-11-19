@@ -84,6 +84,8 @@ def get_services():
             "id": s.get("name"),
             "name": s.get("name"),
             "description": s.get("full_description") or s.get("description") or "",
+            "full_description": s.get("full_description") or "",
+            "duration": s.get("default_duration") or 0,
             "image": s.get("image") or ""
         })
     
